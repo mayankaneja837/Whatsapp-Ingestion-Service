@@ -18,7 +18,9 @@ from app.metrics import inc_http_requests, inc_webhook_result, observe_latency, 
 from app.logging_utils import new_request_id,utc_now,log_event
 
 
-#Lifespan for startup and shutdown of the app
+# ------------------------------------------------------------------------------------
+# LIFESPAN (startup + shutdown)
+# -----------------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     db = await init_db(settings.DATABASE_URL)
@@ -30,6 +32,9 @@ async def lifespan(app:FastAPI):
 
 app = FastAPI(title="Assignment",lifespan=lifespan)
 
+# ------------------------------------------------------------------------------------
+# LOGGING MIDDLEWARE (structured logs)
+# ------------------------------------------------------------------------------------
 @app.middleware("http")
 async def logging_middleware(request:Request,call_next):
     request_id = new_request_id()
@@ -51,7 +56,10 @@ async def logging_middleware(request:Request,call_next):
 
     return response
 
-#Middleware for tracking latency,status_code and path counts
+
+# ------------------------------------------------------------------------------------
+# METRICS MIDDLEWARE
+# -----------------------------------------------------------------------------------
 @app.middleware("http")
 async def metrics_middleware(request:Request,call_next):
     import time
@@ -67,7 +75,9 @@ async def metrics_middleware(request:Request,call_next):
     return response
 
 
-
+# ------------------------------------------------------------------------------------
+# Pydantic Model
+# ------------------------------------------------------------------------------------
 class WebHookMessage(BaseModel):
     message_id:str = Field(min_length=1)
     from_:str = Field(alias="from")
@@ -93,7 +103,9 @@ class WebHookMessage(BaseModel):
         return v
 
 
-# WebHook Endpoint
+# ------------------------------------------------------------------------------------
+# WEBHOOK ENDPOINT
+# ------------------------------------------------------------------------------------
 @app.post("/webhook")
 async def webhook(request:Request):
     raw_body = await request.body()
@@ -174,7 +186,11 @@ async def webhook(request:Request):
 
     return {"status":"ok"}
 
-#Messages Endpoint
+
+# ------------------------------------------------------------------------------------
+# MESSAGES ENDPOINT
+# ------------------------------------------------------------------------------------
+
 @app.get("/messages")
 async def list_messages(
     request: Request,
@@ -209,14 +225,19 @@ async def list_messages(
     }
 
 
-#Stats Endpoint
+# ------------------------------------------------------------------------------------
+# STATS ENDPOINT
+# ------------------------------------------------------------------------------------
+
 @app.get("/stats")
 async def stats(request:Request):
     return await get_stats(request.app.state.db)
     
 
 
-#Health Live Endpoint
+# ------------------------------------------------------------------------------------
+# HEALTH ENDPOINTS
+# ------------------------------------------------------------------------------------
 @app.get('/health/live')
 async def health_live():
     return JSONResponse({"status":"alive"})
@@ -246,7 +267,9 @@ async def health_ready(request:Request):
     return JSONResponse({"status":"ready"})
 
 
-# Prometheus Style metrics endpoint 
+# ------------------------------------------------------------------------------------
+# PROMETHEUS METRICS
+# ------------------------------------------------------------------------------------
 @app.get("/metrics",response_class=PlainTextResponse)
 async def metrics():
     return render_prometheus()
