@@ -1,4 +1,4 @@
-# Lyftr AI Assignment - Message Webhook API
+# Whatsapp-Ingestion-Service
 
 A FastAPI-based webhook service for receiving, storing, and querying SMS messages with HMAC signature verification, pagination, and Prometheus-style metrics.
 
